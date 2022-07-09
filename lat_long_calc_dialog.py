@@ -24,12 +24,10 @@
 
 import os
 
-from qgis.PyQt import uic
-from qgis.PyQt import QtWidgets
+from qgis.PyQt import QtWidgets, uic
 
 # This loads your .ui file so that PyQt can populate your plugin with the elements from Qt Designer
-FORM_CLASS, _ = uic.loadUiType(os.path.join(
-    os.path.dirname(__file__), 'lat_long_calc_dialog_base.ui'))
+FORM_CLASS, _ = uic.loadUiType(os.path.join(os.path.dirname(__file__), "lat_long_calc_dialog_base.ui"))
 
 
 class LatLongCalcDialog(QtWidgets.QDialog, FORM_CLASS):
@@ -42,3 +40,80 @@ class LatLongCalcDialog(QtWidgets.QDialog, FORM_CLASS):
         # http://qt-project.org/doc/qt-4.8/designer-using-a-ui-file.html
         # #widgets-and-dialogs-with-auto-connect
         self.setupUi(self)
+
+        self.spinBox_lat_d.valueChanged.connect(self.lat_dms_to_dd)
+        self.spinBox_lat_m.valueChanged.connect(self.lat_dms_to_dd)
+        self.doubleSpinBox_lat_s.editingFinished.connect(self.lat_dms_to_dd)
+        self.comboBox_lat.currentTextChanged.connect(self.lat_dms_to_dd)
+
+        self.doubleSpinBox_lat_d.editingFinished.connect(self.lat_dd_to_dms)
+
+        self.spinBox_long_d.valueChanged.connect(self.long_dms_to_dd)
+        self.spinBox_long_m.valueChanged.connect(self.long_dms_to_dd)
+        self.doubleSpinBox_long_s.editingFinished.connect(self.long_dms_to_dd)
+        self.comboBox_long.currentTextChanged.connect(self.long_dms_to_dd)
+
+        self.doubleSpinBox_long_d.editingFinished.connect(self.long_dd_to_dms)
+
+        self.pushButton_reset.clicked.connect(self.reset)
+
+    @staticmethod
+    def dd_to_dms(dd):
+        if dd == 0:
+            return 0, 0, 0, None
+        min, sec = divmod(abs(dd) * 3600, 60)
+        deg, min = divmod(min, 60)
+        return deg, min, sec, int(dd > 0)
+
+    @staticmethod
+    def dms_to_dd(deg, min, sec, hem_index):
+        return (deg + min / 60 + sec / 3600) * (hem_index * 2 - 1)
+
+    def lat_dd_to_dms(self):
+        deg, min, sec, hem_index = self.dd_to_dms(self.doubleSpinBox_lat_d.value())
+        self.spinBox_lat_d.setValue(deg)
+        self.spinBox_lat_m.setValue(min)
+        self.doubleSpinBox_lat_s.setValue(sec)
+        if hem_index is not None:
+            self.comboBox_lat.setCurrentIndex(hem_index)
+
+    def lat_dms_to_dd(self):
+        self.doubleSpinBox_lat_d.setValue(
+            self.dms_to_dd(
+                self.spinBox_lat_d.value(),
+                self.spinBox_lat_m.value(),
+                self.doubleSpinBox_lat_s.value(),
+                self.comboBox_lat.currentIndex(),
+            )
+        )
+
+    def long_dd_to_dms(self):
+        deg, min, sec, hem_index = self.dd_to_dms(self.doubleSpinBox_long_d.value())
+        self.spinBox_long_d.setValue(deg)
+        self.spinBox_long_m.setValue(min)
+        self.doubleSpinBox_long_s.setValue(sec)
+        if hem_index is not None:
+            self.comboBox_long.setCurrentIndex(hem_index)
+
+    def long_dms_to_dd(self):
+        self.doubleSpinBox_long_d.setValue(
+            self.dms_to_dd(
+                self.spinBox_long_d.value(),
+                self.spinBox_long_m.value(),
+                self.doubleSpinBox_long_s.value(),
+                self.comboBox_long.currentIndex(),
+            )
+        )
+
+    def reset(self):
+        self.spinBox_lat_d.setValue(0)
+        self.spinBox_lat_m.setValue(0)
+        self.doubleSpinBox_lat_s.setValue(0)
+        self.comboBox_lat.setCurrentText("N")
+        self.doubleSpinBox_lat_d.setValue(0)
+
+        self.spinBox_long_d.setValue(0)
+        self.spinBox_long_m.setValue(0)
+        self.doubleSpinBox_long_s.setValue(0)
+        self.comboBox_long.setCurrentText("E")
+        self.doubleSpinBox_long_d.setValue(0)
